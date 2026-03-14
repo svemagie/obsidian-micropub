@@ -19,6 +19,7 @@ import { Notice, Plugin, TFile } from "obsidian";
 import { DEFAULT_SETTINGS, type MicropubSettings } from "./types";
 import { MicropubSettingsTab } from "./SettingsTab";
 import { Publisher } from "./Publisher";
+import { handleProtocolCallback } from "./IndieAuth";
 
 export default class MicropubPlugin extends Plugin {
   settings!: MicropubSettings;
@@ -53,6 +54,14 @@ export default class MicropubPlugin extends Plugin {
         this.publishActiveNote(file);
         return true;
       },
+    });
+
+    // ── IndieAuth protocol handler ────────────────────────────────────────
+    // Receives obsidian://micropub-auth?code=...&state=... after the user
+    // approves on their IndieAuth login page. The GitHub Pages callback page
+    // at svemagie.github.io/obsidian-micropub/callback redirects here.
+    this.registerObsidianProtocolHandler("micropub-auth", (params) => {
+      handleProtocolCallback(params as Record<string, string>);
     });
 
     // ── Settings tab ─────────────────────────────────────────────────────

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Returning to Obsidian…</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center;
+           justify-content: center; min-height: 100vh; margin: 0; background: #f9fafb; }
+    .card { text-align: center; padding: 2rem; border-radius: 12px; background: #fff;
+            box-shadow: 0 2px 16px rgba(0,0,0,.08); max-width: 360px; }
+    .icon { font-size: 3rem; margin-bottom: .5rem; }
+    h1 { font-size: 1.3rem; margin: .5rem 0; }
+    p  { color: #6b7280; margin: .5rem 0; font-size: .9rem; }
+    .error { color: #dc2626; }
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="icon">⏳</div>
+  <h1>Returning to Obsidian…</h1>
+  <p>Opening the Micropub Publisher plugin.</p>
+</div>
+
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const code  = params.get("code");
+    const state = params.get("state");
+    const error = params.get("error");
+    const errorDesc = params.get("error_description");
+
+    const card = document.getElementById("card");
+
+    if (error) {
+      card.innerHTML =
+        '<div class="icon">❌</div>' +
+        '<h1 class="error">Authorization failed</h1>' +
+        '<p>' + (errorDesc || error) + '</p>' +
+        '<p>You can close this tab and try again in Obsidian.</p>';
+      return;
+    }
+
+    if (!code || !state) {
+      card.innerHTML =
+        '<div class="icon">❌</div>' +
+        '<h1 class="error">Missing parameters</h1>' +
+        '<p>No authorization code was received.</p>';
+      return;
+    }
+
+    // Redirect to the Obsidian protocol handler.
+    // obsidian://micropub-auth is registered by the plugin via
+    // this.registerObsidianProtocolHandler("micropub-auth", handler)
+    const obsidianUrl =
+      "obsidian://micropub-auth?code=" +
+      encodeURIComponent(code) +
+      "&state=" +
+      encodeURIComponent(state);
+
+    window.location.href = obsidianUrl;
+
+    // Fallback message if Obsidian doesn't open
+    setTimeout(function () {
+      card.innerHTML =
+        '<div class="icon">✅</div>' +
+        '<h1>Authorized!</h1>' +
+        '<p>If Obsidian did not open automatically, click below.</p>' +
+        '<p><a href="' + obsidianUrl + '" style="color:#6c3fc7">Open in Obsidian →</a></p>' +
+        '<p>You can close this tab afterwards.</p>';
+    }, 2000);
+  })();
+</script>
+</body>
+</html>

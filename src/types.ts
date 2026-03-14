@@ -32,8 +32,26 @@ export interface MicropubSettings {
    */
   autoDiscover: boolean;
 
-  /** Your site's homepage URL — used for endpoint discovery. */
+  /** Your site's homepage URL — used for endpoint discovery and IndieAuth. */
   siteUrl: string;
+
+  /**
+   * The authorization_endpoint discovered from the site.
+   * Populated automatically by the IndieAuth sign-in flow.
+   */
+  authorizationEndpoint: string;
+
+  /**
+   * The token_endpoint discovered from the site.
+   * Populated automatically by the IndieAuth sign-in flow.
+   */
+  tokenEndpoint: string;
+
+  /**
+   * The canonical "me" URL returned by the token endpoint after sign-in.
+   * Used to show who is currently logged in.
+   */
+  me: string;
 
   /**
    * When true, after a successful publish the post URL returned by the server
@@ -59,6 +77,9 @@ export const DEFAULT_SETTINGS: MicropubSettings = {
   defaultSyndicateTo: [],
   autoDiscover: false,
   siteUrl: "",
+  authorizationEndpoint: "",
+  tokenEndpoint: "",
+  me: "",
   writeUrlToFrontmatter: true,
   mapGardenTags: true,
   defaultVisibility: "public",
