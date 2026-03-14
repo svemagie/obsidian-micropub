@@ -81,12 +81,40 @@ export class Publisher {
   ): Record<string, unknown> {
     const props: Record<string, unknown> = {};
 
-    // Required: content
-    props["content"] = [{ html: body }];
+    // ── Post type detection ───────────────────────────────────────────────
+    // Interaction posts (bookmark, like, reply, repost) have no body content.
+    // For those, only include content if the note body is non-empty (i.e. a comment/quote).
+    const trimmedBody = body.trim();
+
+    // ── Interaction URL properties ────────────────────────────────────────
+    // Support both camelCase (Obsidian-friendly) and hyphenated (Micropub-spec).
+    const bookmarkOf = fm["bookmarkOf"] ?? fm["bookmark-of"];
+    const likeOf     = fm["likeOf"]     ?? fm["like-of"];
+    const inReplyTo  = fm["inReplyTo"]  ?? fm["in-reply-to"];
+    const repostOf   = fm["repostOf"]   ?? fm["repost-of"];
+
+    if (bookmarkOf) props["bookmark-of"] = [String(bookmarkOf)];
+    if (likeOf)     props["like-of"]     = [String(likeOf)];
+    if (inReplyTo)  props["in-reply-to"] = [String(inReplyTo)];
+    if (repostOf)   props["repost-of"]   = [String(repostOf)];
+
+    // Content — omit for bare likes/reposts with no body text
+    const isInteractionWithoutBody =
+      (likeOf || repostOf) && !trimmedBody;
+    if (!isInteractionWithoutBody) {
+      props["content"] = trimmedBody ? [{ html: trimmedBody }] : [{ html: "" }];
+    }
+
+    // ── Standard properties ───────────────────────────────────────────────
 
     // Title (articles have titles; notes/micro-posts don't)
     if (fm["title"]) {
       props["name"] = [String(fm["title"])];
+    }
+
+    // Summary / excerpt
+    if (fm["summary"] ?? fm["excerpt"]) {
+      props["summary"] = [String(fm["summary"] ?? fm["excerpt"])];
     }
 
     // Published date
@@ -106,13 +134,14 @@ export class Publisher {
 
     // Garden stage → dedicated property
     if (this.settings.mapGardenTags && gardenStage) {
-      // Indiekit stores this as gardenStage in front matter;
-      // Micropub JSON uses hyphenated keys
       props["garden-stage"] = [gardenStage];
     }
 
     // Syndication targets
-    const syndicateTo = this.resolveArray(fm["mp-syndicate-to"]);
+    // Support both camelCase (mpSyndicateTo) used in existing blog posts and mp-syndicate-to
+    const syndicateTo = this.resolveArray(
+      fm["mp-syndicate-to"] ?? fm["mpSyndicateTo"],
+    );
     const allSyndicateTo = [
       ...new Set([...this.settings.defaultSyndicateTo, ...syndicateTo]),
     ];
@@ -127,8 +156,17 @@ export class Publisher {
       props["visibility"] = [visibility];
     }
 
-    // Uploaded images (from local → remote URL conversion)
-    if (uploadedUrls.length > 0) {
+    // AI disclosure (custom property passed through to Indiekit)
+    if (fm["ai"] && typeof fm["ai"] === "object") {
+      props["ai"] = [fm["ai"]];
+    }
+
+    // Photos: prefer structured photo array from frontmatter (with alt text),
+    // fall back to uploaded local images.
+    const fmPhotos = this.resolvePhotoArray(fm["photo"]);
+    if (fmPhotos.length > 0) {
+      props["photo"] = fmPhotos;
+    } else if (uploadedUrls.length > 0) {
       props["photo"] = uploadedUrls.map((url) => ({ value: url }));
     }
 
@@ -140,6 +178,34 @@ export class Publisher {
     }
 
     return props;
+  }
+
+  /**
+   * Normalise the `photo` frontmatter field into Micropub photo objects.
+   * Handles three formats:
+   *   - string URL: "https://..."
+   *   - array of strings: ["https://..."]
+   *   - array of objects: [{url: "https://...", alt: "..."}]
+   */
+  private resolvePhotoArray(
+    value: unknown,
+  ): Array<{ value: string; alt?: string }> {
+    if (!value) return [];
+    const items = Array.isArray(value) ? value : [value];
+    return items
+      .map((item) => {
+        if (typeof item === "string") return { value: item };
+        if (typeof item === "object" && item !== null) {
+          const obj = item as Record<string, unknown>;
+          const url = String(obj["url"] ?? obj["value"] ?? "");
+          if (!url) return null;
+          return obj["alt"]
+            ? { value: url, alt: String(obj["alt"]) }
+            : { value: url };
+        }
+        return null;
+      })
+      .filter((x): x is { value: string; alt?: string } => x !== null);
   }
 
   // ── Garden tag extraction ────────────────────────────────────────────────
