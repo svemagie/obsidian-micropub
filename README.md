@@ -68,9 +68,9 @@ Tag any note in Obsidian with a `#garden/*` tag, or set `gardenStage` directly i
 
 | Obsidian tag | Published property | Blog display |
 |---|---|---|
-| `#garden/plant` | `gardenStage: plant` | 🌱 Seedling |
-| `#garden/cultivate` | `gardenStage: cultivate` | 🌿 Growing |
 | `#garden/evergreen` | `gardenStage: evergreen` | 🌳 Evergreen |
+| `#garden/cultivate` | `gardenStage: cultivate` | 🌿 Growing |
+| `#garden/plant` | `gardenStage: plant` | 🌱 Seedling |
 | `#garden/question` | `gardenStage: question` | ❓ Open Question |
 | `#garden/repot` | `gardenStage: repot` | 🪴 Repotting |
 | `#garden/revitalize` | `gardenStage: revitalize` | ✨ Revitalizing |
@@ -84,14 +84,15 @@ The Eleventy blog renders a coloured badge on each post and groups all garden po
 ---
 title: "On building in public"
 tags:
-  - garden/cultivate
+  - garden/plant
+category:
   - indieweb
 ---
 
 Some early thoughts on the merits of building in public...
 ```
 
-After publishing, the frontmatter gains:
+After publishing, the frontmatter/property in Obsidian gains:
 
 ```yaml
 mp-url: "https://example.com/articles/2026/on-building-in-public"
@@ -108,7 +109,7 @@ mp-url: "https://example.com/articles/2026/on-building-in-public"
 | `title` | Sets the post `name` (article mode) |
 | `created` / `date` | Sets `published` date (`created` takes priority — matches Obsidian's default date field) |
 | `postType` | Force post type: `article` sends a title (uses filename if none set), `note` skips title |
-| `tags` / `category` | Becomes Micropub `category` (excluding `garden/*` and bare `garden` tags) |
+| `tags` + `category` | Both merged into Micropub `category` (excluding `garden/*` and bare `garden` tags, deduplicated) |
 | `summary` / `excerpt` | Sets `summary` property |
 | `visibility` | `public` / `unlisted` / `private` |
 | `gardenStage` | Explicit garden stage — see table below |
@@ -118,14 +119,14 @@ mp-url: "https://example.com/articles/2026/on-building-in-public"
 
 ### AI disclosure properties
 
-Use flat top-level properties for best Obsidian compatibility (Obsidian's Properties UI handles them more reliably than nested objects):
+Use flat kebab-case properties (camelCase fallback supported for backward compatibility):
 
 | Property | Values | Meaning |
 |---|---|---|
-| `aiTextLevel` | `"0"` `"1"` `"2"` `"3"` | None / Editorial / Co-drafted / AI-generated |
-| `aiCodeLevel` | `"0"` `"1"` `"2"` | None / AI-assisted / AI-generated |
-| `aiTools` | string | Tools used, e.g. `"Claude"` |
-| `aiDescription` | string | Free-text disclosure note |
+| `ai-text-level` | `"0"` `"1"` `"2"` `"3"` | None / Editorial / Co-drafted / AI-generated |
+| `ai-code-level` | `"0"` `"1"` `"2"` | None / AI-assisted / AI-generated |
+| `ai-tools` | string | Tools used, e.g. `"Claude"` |
+| `ai-description` | string | Free-text disclosure note |
 
 Nested `ai:` objects (e.g. `ai: {textLevel: "1"}`) also work but flat keys are recommended.
 
@@ -137,11 +138,14 @@ title: "My Post"
 created: 2026-03-15T10:00:00
 postType: article
 tags:
-  - garden/cultivate
+  - garden/evergreen
+category:
   - indieweb
-aiTextLevel: "1"
-aiCodeLevel: "0"
-aiTools: "Claude"
+  - lang/en
+ai-text-level: "1"
+ai-code-level: "0"
+ai-tools: "Claude"
+ai-description: "AI helped refine the structure"
 ---
 ```
 

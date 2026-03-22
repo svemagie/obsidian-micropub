@@ -137,14 +137,19 @@ export class Publisher {
       props["published"] = [new Date(String(rawDate)).toISOString()];
     }
 
-    // Categories from frontmatter `category` or `tags` (excluding garden/* tags)
-    const rawTags = this.resolveArray(fm["tags"] ?? fm["category"]);
+    // Categories from frontmatter `category` AND `tags` (excluding garden/* tags).
+    // Merge both fields — `tags` may contain garden/* stages while `category`
+    // holds the actual topic categories sent to Micropub.
+    const rawTags = [
+      ...this.resolveArray(fm["tags"]),
+      ...this.resolveArray(fm["category"]),
+    ];
     const gardenStageFromTags = this.extractGardenStage(rawTags);
     const normalTags = rawTags.filter(
       (t) => !t.startsWith(GARDEN_TAG_PREFIX) && t !== "garden",
     );
     if (normalTags.length > 0) {
-      props["category"] = normalTags;
+      props["category"] = [...new Set(normalTags)];
     }
 
     // Garden stage — prefer explicit `gardenStage` frontmatter property,
@@ -178,22 +183,20 @@ export class Publisher {
       props["visibility"] = [visibility];
     }
 
-    // AI disclosure — flatten nested `ai` object into individual top-level
-    // properties so Indiekit writes them as plain scalar frontmatter keys.
-    // Also support top-level `aiTextLevel`, `aiTools`, etc. set directly.
-    // Sending `ai: [{textLevel: "1"}]` makes Indiekit write a YAML array,
-    // but the template reads `aiTextLevel` / `aiCodeLevel` as top-level scalars.
+    // AI disclosure — kebab-case keys (ai-text-level, ai-tools, etc.)
+    // with camelCase fallback for backward compatibility.
+    // Also support nested `ai` object flattening.
     const aiObj = (fm["ai"] && typeof fm["ai"] === "object")
       ? fm["ai"] as Record<string, unknown>
       : {};
-    const aiTextLevel    = fm["aiTextLevel"]    ?? aiObj["textLevel"];
-    const aiCodeLevel    = fm["aiCodeLevel"]    ?? aiObj["codeLevel"];
-    const aiTools        = fm["aiTools"]        ?? aiObj["aiTools"]   ?? aiObj["tools"];
-    const aiDescription  = fm["aiDescription"]  ?? aiObj["aiDescription"] ?? aiObj["description"];
-    if (aiTextLevel    != null) props["aiTextLevel"]   = [String(aiTextLevel)];
-    if (aiCodeLevel    != null) props["aiCodeLevel"]   = [String(aiCodeLevel)];
-    if (aiTools        != null) props["aiTools"]       = [String(aiTools)];
-    if (aiDescription  != null) props["aiDescription"] = [String(aiDescription)];
+    const aiTextLevel    = fm["ai-text-level"]  ?? fm["aiTextLevel"]    ?? aiObj["textLevel"];
+    const aiCodeLevel    = fm["ai-code-level"]  ?? fm["aiCodeLevel"]    ?? aiObj["codeLevel"];
+    const aiTools        = fm["ai-tools"]       ?? fm["aiTools"]        ?? aiObj["aiTools"]   ?? aiObj["tools"];
+    const aiDescription  = fm["ai-description"] ?? fm["aiDescription"]  ?? aiObj["aiDescription"] ?? aiObj["description"];
+    if (aiTextLevel    != null) props["ai-text-level"]  = [String(aiTextLevel)];
+    if (aiCodeLevel    != null) props["ai-code-level"]  = [String(aiCodeLevel)];
+    if (aiTools        != null) props["ai-tools"]       = [String(aiTools)];
+    if (aiDescription  != null) props["ai-description"] = [String(aiDescription)];
 
     // Photos: prefer structured photo array from frontmatter (with alt text),
     // fall back to uploaded local images.
