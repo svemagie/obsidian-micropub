@@ -161,6 +161,13 @@ export class Publisher {
         (fm["gardenStage"] as string | undefined) ?? gardenStageFromTags;
       if (gardenStage) {
         props["gardenStage"] = [gardenStage];
+        // Pass through the evergreen date so Indiekit writes it to the blog post.
+        if (gardenStage === "evergreen") {
+          const evergreeSince = fm["evergreen-since"] as string | undefined;
+          if (evergreeSince) {
+            props["evergreeSince"] = [String(evergreeSince)];
+          }
+        }
       }
     }
 
@@ -374,6 +381,23 @@ export class Publisher {
         fields.push(["medium", `"[[${hostname}]]"`]);
       } catch {
         // ignore malformed siteUrl
+      }
+    }
+
+    // Stamp evergreen-since on first promotion to the evergreen garden stage.
+    {
+      const { frontmatter: fm } = this.parseFrontmatter(originalContent);
+      if (!fm["evergreen-since"]) {
+        const rawTags = [
+          ...this.resolveArray(fm["tags"]),
+          ...this.resolveArray(fm["category"]),
+        ];
+        const stage =
+          (fm["gardenStage"] as string | undefined) ??
+          this.extractGardenStage(rawTags);
+        if (stage === "evergreen") {
+          fields.push(["evergreen-since", publishedDate]);
+        }
       }
     }
 
