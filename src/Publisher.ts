@@ -354,36 +354,61 @@ export class Publisher {
     originalContent: string,
     url: string,
   ): Promise<void> {
+    // Build all fields to write back after a successful publish
+    const now = new Date();
+    const publishedDate = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const fields: Array<[string, string]> = [
+      ["mp-url", `"${url}"`],
+      ["post-status", "published"],
+      ["published", publishedDate],
+    ];
+
+    if (this.settings.siteUrl) {
+      try {
+        const hostname = new URL(this.settings.siteUrl).hostname.replace(/^www\./, "");
+        fields.push(["medium", `"[[${hostname}]]"`]);
+      } catch {
+        // ignore malformed siteUrl
+      }
+    }
+
     const fmMatch = originalContent.match(
       /^(---\r?\n[\s\S]*?\r?\n---\r?\n)([\s\S]*)$/,
     );
 
     if (!fmMatch) {
-      // No existing frontmatter — prepend it
-      const newFm = `---\nmp-url: "${url}"\n---\n`;
-      await this.app.vault.modify(file, newFm + originalContent);
+      // No existing frontmatter — prepend all fields
+      const lines = fields.map(([k, v]) => `${k}: ${v}`).join("\n");
+      await this.app.vault.modify(file, `---\n${lines}\n---\n` + originalContent);
       return;
     }
 
-    // Inject mp-url into existing frontmatter block
-    const fmBlock = fmMatch[1];
+    let fmBlock = fmMatch[1];
     const body = fmMatch[2];
 
-    if (fmBlock.includes("mp-url:")) {
-      // Replace existing mp-url line
-      const updated = fmBlock.replace(
-        /mp-url:.*(\r?\n)/,
-        `mp-url: "${url}"$1`,
-      );
-      await this.app.vault.modify(file, updated + body);
-    } else {
-      // Insert mp-url before closing ---
-      const updated = fmBlock.replace(
-        /(\r?\n---\r?\n)$/,
-        `\nmp-url: "${url}"$1`,
-      );
-      await this.app.vault.modify(file, updated + body);
+    for (const [key, value] of fields) {
+      fmBlock = this.setFrontmatterField(fmBlock, key, value);
     }
+
+    await this.app.vault.modify(file, fmBlock + body);
+  }
+
+  /**
+   * Replace the value of an existing frontmatter field, or insert it before
+   * the closing `---` if the field is not yet present.
+   */
+  private setFrontmatterField(fmBlock: string, key: string, value: string): string {
+    const lineRegex = new RegExp(`^${key}:.*$`, "m");
+    if (lineRegex.test(fmBlock)) {
+      return fmBlock.replace(lineRegex, `${key}: ${value}`);
+    }
+    // Insert before closing ---
+    return fmBlock.replace(/(\r?\n---\r?\n)$/, `\n${key}: ${value}$1`);
   }
 
   private resolveArray(value: unknown): string[] {
