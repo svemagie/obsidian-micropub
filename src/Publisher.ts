@@ -119,7 +119,7 @@ export class Publisher {
     //   postType: article  → always publishes as article (sets `name`)
     //   postType: note     → always publishes as note (skips `name`)
     //   (absent)           → auto-detect: has title → article, otherwise → note
-    const postType = fm["postType"] ?? fm["post-type"] ?? fm["type"];
+    const postType = fm["postType"] ?? fm["posttype"] ?? fm["post-type"] ?? fm["type"];
     const isArticle =
       postType === "article" ||
       (!postType && Boolean(fm["title"] ?? fm["name"]));
@@ -209,13 +209,13 @@ export class Publisher {
     if (aiTools        != null) props["ai-tools"]       = [String(aiTools)];
     if (aiDescription  != null) props["ai-description"] = [String(aiDescription)];
 
-    // Photos: prefer structured photo array from frontmatter (with alt text),
-    // fall back to uploaded local images.
+    // Photos: only use explicitly declared photo frontmatter (with alt text).
+    // Inline images uploaded from the body are already embedded in `content`
+    // and must NOT be added as `photo` — doing so would make Micropub treat
+    // the post as a photo post instead of an article/note.
     const fmPhotos = this.resolvePhotoArray(fm["photo"]);
     if (fmPhotos.length > 0) {
       props["photo"] = fmPhotos;
-    } else if (uploadedUrls.length > 0) {
-      props["photo"] = uploadedUrls.map((url) => ({ value: url }));
     }
 
     // Related posts — resolve [[WikiLink]] wikilinks to published blog URLs
