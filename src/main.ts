@@ -15,10 +15,12 @@
  * Based on: https://github.com/svemagie/obsidian-microblog (MIT)
  */
 
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, Plugin, TFile, parseYaml } from "obsidian";
 import { DEFAULT_SETTINGS, type MicropubSettings } from "./types";
 import { MicropubSettingsTab } from "./SettingsTab";
 import { Publisher } from "./Publisher";
+import { MicropubClient } from "./MicropubClient";
+import { SyndicationDialog } from "./SyndicationDialog";
 import { handleProtocolCallback } from "./IndieAuth";
 
 export default class MicropubPlugin extends Plugin {
@@ -101,11 +103,19 @@ export default class MicropubPlugin extends Plugin {
       return;
     }
 
+    // ── Syndication dialog ────────────────────────────────────────────────
+    // Determine which syndication targets to use, optionally showing a dialog.
+    const syndicateToOverride = await this.resolveSyndicationTargets(file);
+    if (syndicateToOverride === null) {
+      // User cancelled the dialog — abort publish
+      return;
+    }
+
     const notice = new Notice("Publishing…", 0 /* persist until dismissed */);
 
     try {
       const publisher = new Publisher(this.app, this.settings);
-      const result = await publisher.publish(file);
+      const result = await publisher.publish(file, syndicateToOverride);
 
       notice.hide();
 
@@ -124,6 +134,81 @@ export default class MicropubPlugin extends Plugin {
       new Notice(`❌ Error: ${msg}`, 10000);
       console.error("[micropub] Unexpected error:", err);
     }
+  }
+
+  /**
+   * Decide whether to show the syndication dialog and return the selected targets.
+   *
+   * Returns:
+   *   string[] — targets to use as override (may be empty)
+   *   undefined — no override; Publisher will use frontmatter + settings defaults
+   *   null — user cancelled; abort publish
+   */
+  private async resolveSyndicationTargets(
+    file: TFile,
+  ): Promise<string[] | undefined | null> {
+    const dialogSetting = this.settings.showSyndicationDialog;
+
+    // "never" — skip dialog entirely, let Publisher handle targets from frontmatter + settings
+    if (dialogSetting === "never") return undefined;
+
+    // Fetch available targets from the server
+    let availableTargets: import("./types").SyndicationTarget[] = [];
+    try {
+      const client = new MicropubClient(
+        () => this.settings.micropubEndpoint,
+        () => this.settings.mediaEndpoint,
+        () => this.settings.accessToken,
+      );
+      const config = await client.fetchConfig();
+      availableTargets = config["syndicate-to"] ?? [];
+    } catch {
+      // Config fetch failed — fall back to normal publish without dialog
+      new Notice(
+        "⚠️ Could not fetch syndication targets. Publishing without dialog.",
+        4000,
+      );
+      return undefined;
+    }
+
+    // No targets on this server — skip dialog (backward compatible)
+    if (availableTargets.length === 0) return undefined;
+
+    // Read mp-syndicate-to from frontmatter
+    let fmSyndicateTo: string[] | undefined;
+    try {
+      const raw = await this.app.vault.read(file);
+      const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+      if (fmMatch) {
+        const fm = (parseYaml(fmMatch[1]) ?? {}) as Record<string, unknown>;
+        const val = fm["mp-syndicate-to"];
+        if (val !== undefined) {
+          fmSyndicateTo = Array.isArray(val) ? val.map(String) : [String(val)];
+        }
+      }
+    } catch {
+      // Malformed frontmatter — treat as absent
+    }
+
+    // Decide whether to show dialog
+    const showDialog =
+      dialogSetting === "always" ||
+      (dialogSetting === "when-needed" && fmSyndicateTo === undefined) ||
+      (fmSyndicateTo !== undefined && fmSyndicateTo.length === 0);
+
+    if (!showDialog) {
+      // Frontmatter has values and setting is "when-needed" — skip dialog
+      return undefined;
+    }
+
+    // Pre-check: use frontmatter values if non-empty, otherwise plugin defaults
+    const defaultSelected =
+      fmSyndicateTo && fmSyndicateTo.length > 0
+        ? fmSyndicateTo
+        : this.settings.defaultSyndicateTo;
+
+    const dialog = new SyndicationDialog(this.app, availableTargets, defaultSelected);
+    return dialog.awaitSelection();
   }
 
   // ── Settings persistence ──────────────────────────────────────────────────
