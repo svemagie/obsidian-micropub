@@ -68,6 +68,14 @@ export interface MicropubSettings {
 
   /** Visibility default for new posts: "public" | "unlisted" | "private" */
   defaultVisibility: "public" | "unlisted" | "private";
+
+  /**
+   * Controls when the syndication target dialog is shown before publishing.
+   *   "when-needed" — Show only if mp-syndicate-to is absent from frontmatter
+   *   "always"      — Show every time, even if frontmatter has targets
+   *   "never"       — Never show dialog; use defaultSyndicateTo + frontmatter
+   */
+  showSyndicationDialog: "when-needed" | "always" | "never";
 }
 
 export const DEFAULT_SETTINGS: MicropubSettings = {
@@ -83,6 +91,7 @@ export const DEFAULT_SETTINGS: MicropubSettings = {
   writeUrlToFrontmatter: true,
   mapGardenTags: true,
   defaultVisibility: "public",
+  showSyndicationDialog: "when-needed",
 };
 
 /** A syndication target as returned by Micropub config query */

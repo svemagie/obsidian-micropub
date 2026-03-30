@@ -35,7 +35,7 @@ export class Publisher {
   }
 
   /** Publish the given file. Returns PublishResult. */
-  async publish(file: TFile): Promise<PublishResult> {
+  async publish(file: TFile, syndicateToOverride?: string[]): Promise<PublishResult> {
     const raw = await this.app.vault.read(file);
     const { frontmatter, body } = this.parseFrontmatter(raw);
 
@@ -53,7 +53,7 @@ export class Publisher {
     const linkedBody = this.resolveWikilinks(processedBody, file.path);
 
     // Build Micropub properties
-    const properties = this.buildProperties(frontmatter, linkedBody, uploadedUrls, file.basename, file.path);
+    const properties = this.buildProperties(frontmatter, linkedBody, uploadedUrls, file.basename, file.path, syndicateToOverride);
 
     let result: PublishResult;
 
@@ -69,9 +69,14 @@ export class Publisher {
       result = await this.client.createPost(properties);
     }
 
-    // Write URL back to frontmatter
-    if (result.success && result.url && this.settings.writeUrlToFrontmatter) {
-      await this.writeUrlToNote(file, raw, result.url);
+    // Write URL (and syndication targets) back to frontmatter
+    if (result.success && this.settings.writeUrlToFrontmatter) {
+      if (result.url) {
+        await this.writeUrlToNote(file, raw, result.url, syndicateToOverride);
+      } else if (syndicateToOverride !== undefined) {
+        // No URL returned but we still want to record the syndication targets
+        await this.writeSyndicateToNote(file, raw, syndicateToOverride);
+      }
     }
 
     return result;
@@ -85,6 +90,7 @@ export class Publisher {
     uploadedUrls: string[],
     basename: string,
     filePath: string,
+    syndicateToOverride?: string[],
   ): Record<string, unknown> {
     const props: Record<string, unknown> = {};
 
@@ -176,13 +182,17 @@ export class Publisher {
     }
 
     // Syndication targets
-    // Support both camelCase (mpSyndicateTo) used in existing blog posts and mp-syndicate-to
-    const syndicateTo = this.resolveArray(
-      fm["mp-syndicate-to"] ?? fm["mpSyndicateTo"],
-    );
-    const allSyndicateTo = [
-      ...new Set([...this.settings.defaultSyndicateTo, ...syndicateTo]),
-    ];
+    // When the dialog was shown, syndicateToOverride contains the user's selection
+    // and takes precedence over frontmatter + settings defaults.
+    // Support both camelCase (mpSyndicateTo) used in existing blog posts and mp-syndicate-to.
+    const allSyndicateTo = syndicateToOverride !== undefined
+      ? syndicateToOverride
+      : [
+          ...new Set([
+            ...this.settings.defaultSyndicateTo,
+            ...this.resolveArray(fm["mp-syndicate-to"] ?? fm["mpSyndicateTo"]),
+          ]),
+        ];
     if (allSyndicateTo.length > 0) {
       props["mp-syndicate-to"] = allSyndicateTo;
     }
@@ -375,6 +385,7 @@ export class Publisher {
     file: TFile,
     originalContent: string,
     url: string,
+    syndicateToOverride?: string[],
   ): Promise<void> {
     // Build all fields to write back after a successful publish
     const now = new Date();
@@ -389,6 +400,11 @@ export class Publisher {
       ["post-status", "published"],
       ["published", publishedDate],
     ];
+
+    // Record the syndication targets used so future publishes know what was sent
+    if (syndicateToOverride !== undefined) {
+      fields.push(["mp-syndicate-to", `[${syndicateToOverride.join(", ")}]`]);
+    }
 
     if (this.settings.siteUrl) {
       try {
@@ -435,6 +451,32 @@ export class Publisher {
     }
 
     await this.app.vault.modify(file, fmBlock + body);
+  }
+
+  /**
+   * Write mp-syndicate-to to frontmatter without touching other fields.
+   * Used when publish succeeds but returns no URL (e.g. update responses).
+   */
+  private async writeSyndicateToNote(
+    file: TFile,
+    originalContent: string,
+    syndicateTo: string[],
+  ): Promise<void> {
+    const fmMatch = originalContent.match(
+      /^(---\r?\n[\s\S]*?\r?\n---\r?\n)([\s\S]*)$/,
+    );
+    const value = `[${syndicateTo.join(", ")}]`;
+
+    if (!fmMatch) {
+      await this.app.vault.modify(
+        file,
+        `---\nmp-syndicate-to: ${value}\n---\n` + originalContent,
+      );
+      return;
+    }
+
+    const fmBlock = this.setFrontmatterField(fmMatch[1], "mp-syndicate-to", value);
+    await this.app.vault.modify(file, fmBlock + fmMatch[2]);
   }
 
   /**

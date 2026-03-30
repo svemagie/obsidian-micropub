@@ -110,6 +110,49 @@ export class MicropubSettingsTab extends PluginSettingTab {
           }),
       );
 
+    new Setting(containerEl)
+      .setName("Syndication dialog")
+      .setDesc(
+        "When to show the cross-posting dialog before publishing. " +
+        "'When needed' shows it only if the note has no mp-syndicate-to frontmatter.",
+      )
+      .addDropdown((drop) =>
+        drop
+          .addOption("when-needed", "When needed")
+          .addOption("always", "Always")
+          .addOption("never", "Never")
+          .setValue(this.plugin.settings.showSyndicationDialog)
+          .onChange(async (value) => {
+            this.plugin.settings.showSyndicationDialog = value as
+              | "when-needed"
+              | "always"
+              | "never";
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    // Show configured defaults with a clear button
+    const defaults = this.plugin.settings.defaultSyndicateTo;
+    const defaultsSetting = new Setting(containerEl)
+      .setName("Default syndication targets")
+      .setDesc(
+        defaults.length > 0
+          ? defaults.join(", ")
+          : "None configured. Targets checked by default in the publish dialog.",
+      );
+    if (defaults.length > 0) {
+      defaultsSetting.addButton((btn) =>
+        btn
+          .setButtonText("Clear defaults")
+          .setWarning()
+          .onClick(async () => {
+            this.plugin.settings.defaultSyndicateTo = [];
+            await this.plugin.saveSettings();
+            this.display();
+          }),
+      );
+    }
+
     // ── Digital Garden ───────────────────────────────────────────────────
     containerEl.createEl("h3", { text: "Digital Garden" });
 
