@@ -25,8 +25,10 @@ export const en: Record<string, string> = {
   // Settings — endpoints
   settingMicropubEndpoint: "Micropub endpoint",
   settingMicropubEndpointDesc: "e.g. https://example.com/micropub", // intentional: replaces personal domain in source
+  settingMicropubEndpointPlaceholder: "https://example.com/micropub",
   settingMediaEndpoint:    "Media endpoint",
   settingMediaEndpointDesc:"For image uploads. Auto-discovered if blank.",
+  settingMediaEndpointPlaceholder:    "https://example.com/micropub/media",
 
   // Settings — publish behaviour
   settingVisibility:       "Default visibility",
@@ -67,6 +69,7 @@ export const en: Record<string, string> = {
   manualTokenSummary:      "Or paste a token manually",
   settingAccessToken:      "Access token",
   settingAccessTokenDesc:  "Bearer token from your Indiekit admin panel.",
+  settingAccessTokenPlaceholder:      "your-bearer-token",
   btnVerify:               "Verify",
   noticeSetEndpointFirst:  "Set the Micropub endpoint and token first.",
   noticeTokenValid:        "✅ Token is valid!",

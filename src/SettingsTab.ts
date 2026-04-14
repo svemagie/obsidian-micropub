@@ -54,7 +54,7 @@ export class MicropubSettingsTab extends PluginSettingTab {
       .setDesc(t("settingMicropubEndpointDesc"))
       .addText((text) =>
         text
-          .setPlaceholder("https://example.com/micropub")
+          .setPlaceholder(t("settingMicropubEndpointPlaceholder"))
           .setValue(this.plugin.settings.micropubEndpoint)
           .onChange(async (value) => {
             this.plugin.settings.micropubEndpoint = value.trim();
@@ -67,7 +67,7 @@ export class MicropubSettingsTab extends PluginSettingTab {
       .setDesc(t("settingMediaEndpointDesc"))
       .addText((text) =>
         text
-          .setPlaceholder("https://example.com/micropub/media")
+          .setPlaceholder(t("settingMediaEndpointPlaceholder"))
           .setValue(this.plugin.settings.mediaEndpoint)
           .onChange(async (value) => {
             this.plugin.settings.mediaEndpoint = value.trim();
@@ -258,7 +258,7 @@ export class MicropubSettingsTab extends PluginSettingTab {
       .setDesc(t("settingAccessTokenDesc"))
       .addText((text) => {
         text
-          .setPlaceholder("your-bearer-token")
+          .setPlaceholder(t("settingAccessTokenPlaceholder"))
           .setValue(this.plugin.settings.accessToken)
           .onChange(async (value) => {
             this.plugin.settings.accessToken = value.trim();
