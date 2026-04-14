@@ -1,7 +1,7 @@
 {
   "id": "obsidian-micropub",
   "name": "Micropub Publisher",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.4.0",
   "description": "Publish notes to any Micropub-compatible endpoint (Indiekit, micro.blog, etc.) with support for Digital Garden stages.",
   "author": "Sven",
