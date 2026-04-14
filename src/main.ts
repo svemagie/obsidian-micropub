@@ -22,6 +22,7 @@ import { Publisher } from "./Publisher";
 import { MicropubClient } from "./MicropubClient";
 import { SyndicationDialog } from "./SyndicationDialog";
 import { handleProtocolCallback } from "./IndieAuth";
+import { t } from "./i18n";
 
 export default class MicropubPlugin extends Plugin {
   settings!: MicropubSettings;
@@ -33,7 +34,7 @@ export default class MicropubPlugin extends Plugin {
 
     this.addCommand({
       id: "publish-to-micropub",
-      name: "Publish to Micropub",
+      name: t("cmdPublish"),
       checkCallback: (checking: boolean) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== "md") return false;
@@ -46,7 +47,7 @@ export default class MicropubPlugin extends Plugin {
 
     this.addCommand({
       id: "publish-to-micropub-update",
-      name: "Update existing Micropub post",
+      name: t("cmdUpdate"),
       checkCallback: (checking: boolean) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== "md") return false;
@@ -72,10 +73,10 @@ export default class MicropubPlugin extends Plugin {
 
     // ── Ribbon icon ──────────────────────────────────────────────────────
 
-    this.addRibbonIcon("send", "Publish to Micropub", () => {
+    this.addRibbonIcon("send", t("cmdPublish"), () => {
       const file = this.app.workspace.getActiveFile();
       if (!file || file.extension !== "md") {
-        new Notice("Open a Markdown note to publish.");
+        new Notice(t("noticeOpenNote"));
         return;
       }
       this.publishActiveNote(file);
@@ -91,14 +92,14 @@ export default class MicropubPlugin extends Plugin {
   private async publishActiveNote(file: TFile): Promise<void> {
     if (!this.settings.micropubEndpoint) {
       new Notice(
-        "⚠️ Micropub endpoint not configured. Open plugin settings to add it.",
+        t("noticeNoEndpoint"),
       );
       return;
     }
 
     if (!this.settings.accessToken) {
       new Notice(
-        "⚠️ Access token not configured. Open plugin settings to add it.",
+        t("noticeNoToken"),
       );
       return;
     }
@@ -111,7 +112,7 @@ export default class MicropubPlugin extends Plugin {
       return;
     }
 
-    const notice = new Notice("Publishing…", 0 /* persist until dismissed */);
+    const notice = new Notice(t("noticePublishing"), 0 /* persist until dismissed */);
 
     try {
       const publisher = new Publisher(this.app, this.settings);
@@ -123,15 +124,15 @@ export default class MicropubPlugin extends Plugin {
         const urlDisplay = result.url
           ? `\n${result.url}`
           : "";
-        new Notice(`✅ Published!${urlDisplay}`, 8000);
+        new Notice(`${t("noticePublished")}${urlDisplay}`, 8000);
       } else {
-        new Notice(`❌ Publish failed: ${result.error}`, 10000);
+        new Notice(t("noticePublishFailed", { error: result.error ?? "" }), 10000);
         console.error("[micropub] Publish failed:", result.error);
       }
     } catch (err: unknown) {
       notice.hide();
       const msg = err instanceof Error ? err.message : String(err);
-      new Notice(`❌ Error: ${msg}`, 10000);
+      new Notice(t("noticeError", { error: msg }), 10000);
       console.error("[micropub] Unexpected error:", err);
     }
   }
@@ -165,7 +166,7 @@ export default class MicropubPlugin extends Plugin {
     } catch {
       // Config fetch failed — fall back to normal publish without dialog
       new Notice(
-        "⚠️ Could not fetch syndication targets. Publishing without dialog.",
+        t("noticeNoSyndTargets"),
         4000,
       );
       return undefined;
