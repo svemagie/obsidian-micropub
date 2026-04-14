@@ -7,6 +7,7 @@
 
 import { App, Modal, Setting } from "obsidian";
 import type { SyndicationTarget } from "./types";
+import { t } from "./i18n";
 
 export class SyndicationDialog extends Modal {
   private selected: Set<string>;
@@ -37,9 +38,9 @@ export class SyndicationDialog extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl("h2", { text: "Syndication targets" });
+    contentEl.createEl("h2", { text: t("syndDialogTitle") });
     contentEl.createEl("p", {
-      text: "Choose where to cross-post this note.",
+      text: t("syndDialogSubtitle"),
       cls: "setting-item-description",
     });
 
@@ -59,14 +60,14 @@ export class SyndicationDialog extends Modal {
     new Setting(contentEl)
       .addButton((btn) =>
         btn
-          .setButtonText("Cancel")
+          .setButtonText(t("btnCancel"))
           .onClick(() => {
             this.finish(null);
           }),
       )
       .addButton((btn) =>
         btn
-          .setButtonText("Publish")
+          .setButtonText(t("btnPublish"))
           .setCta()
           .onClick(() => {
             this.finish([...this.selected]);

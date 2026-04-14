@@ -27,6 +27,7 @@
 
 import * as crypto from "crypto";
 import { requestUrl } from "obsidian";
+import { t } from "./i18n";
 
 export const CLIENT_ID   = "https://svemagie.github.io/obsidian-micropub/";
 export const REDIRECT_URI = "https://svemagie.github.io/obsidian-micropub/callback";
@@ -123,7 +124,7 @@ export class IndieAuth {
       (resolve, reject) => {
         const timeout = setTimeout(() => {
           pendingCallback = null;
-          reject(new Error("Sign-in timed out (5 min). Please try again."));
+          reject(new Error(t("errSignInTimeout")));
         }, AUTH_TIMEOUT_MS);
 
         pendingCallback = {
