@@ -56,7 +56,7 @@ export const de: Record<string, string> = {
   // Settings — sign-in / sign-out
   settingSiteUrl:          "Website-URL",
   settingSiteUrlDesc:      "Startseite deiner Website. Klick auf Anmelden öffnet die Login-Seite deines Blogs im Browser.",
-  settingSiteUrlPlaceholder: "https://example.com",
+  settingSiteUrlPlaceholder: "https://example.com", // intentional: replaces personal domain in source
   btnSignIn:               "Anmelden",
   btnOpeningBrowser:       "Browser wird geöffnet…",
   noticeEnterSiteUrl:      "Bitte zuerst die Website-URL eingeben.",
