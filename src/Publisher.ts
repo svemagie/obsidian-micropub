@@ -115,7 +115,7 @@ export class Publisher {
     const isInteractionWithoutBody =
       (likeOf || repostOf) && !trimmedBody;
     if (!isInteractionWithoutBody) {
-      props["content"] = trimmedBody ? [{ html: trimmedBody }] : [{ html: "" }];
+      props["content"] = trimmedBody ? [{ text: trimmedBody }] : [{ text: "" }];
     }
 
     // ── Standard properties ───────────────────────────────────────────────
@@ -141,10 +141,24 @@ export class Publisher {
       props["summary"] = [String(fm["summary"] ?? fm["excerpt"])];
     }
 
-    // Published date — prefer `created` (Obsidian default), fall back to `date`
+    // Published date — prefer `created` (Obsidian default), fall back to `date`.
+    // Date-only strings (YYYY-MM-DD) are parsed as UTC midnight by the Date
+    // constructor; append the current local time so the published timestamp
+    // reflects when the post was actually sent.
     const rawDate = fm["created"] ?? fm["date"];
     if (rawDate) {
-      props["published"] = [new Date(String(rawDate)).toISOString()];
+      const dateStr = String(rawDate);
+      let published: Date;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        // Date-only: combine with current local time
+        const now = new Date();
+        published = new Date(
+          `${dateStr}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`,
+        );
+      } else {
+        published = new Date(dateStr);
+      }
+      props["published"] = [published.toISOString()];
     }
 
     // Categories from frontmatter `category` AND `tags` (excluding garden/* tags).
@@ -393,7 +407,13 @@ export class Publisher {
       now.getFullYear(),
       String(now.getMonth() + 1).padStart(2, "0"),
       String(now.getDate()).padStart(2, "0"),
-    ].join("-");
+    ].join("-") +
+      "T" +
+      String(now.getHours()).padStart(2, "0") +
+      ":" +
+      String(now.getMinutes()).padStart(2, "0") +
+      ":" +
+      String(now.getSeconds()).padStart(2, "0");
 
     const fields: Array<[string, string]> = [
       ["mp-url", `"${url}"`],
