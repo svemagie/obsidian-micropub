@@ -2,7 +2,7 @@
 
 An Obsidian plugin to publish notes to **any Micropub-compatible endpoint** — Indiekit, Micro.blog, or any server implementing the [W3C Micropub spec](https://www.w3.org/TR/micropub/).
 
-Forked and generalised from [svemagie/obsidian-microblog](https://github.com/svemagie/obsidian-microblog) (MIT).
+Forked and generalised from https://github.com/otaviocc/obsidian-microblog.
 
 ---
 
