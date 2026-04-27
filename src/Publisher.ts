@@ -186,11 +186,15 @@ export class Publisher {
       if (gardenStage) {
         props["gardenStage"] = [gardenStage];
         // Pass through the evergreen date so Indiekit writes it to the blog post.
+        // On first promotion evergreen-since is not in the note yet (writeUrlToNote
+        // stamps it after publish), so we fall back to today to ensure Indiekit
+        // writes evergreen-since immediately — without it the recentEvergreens
+        // collection filter silently drops the post.
         if (gardenStage === "evergreen") {
-          const evergreenSince = fm["evergreen-since"] as string | undefined;
-          if (evergreenSince) {
-            props["evergreenSince"] = [String(evergreenSince)];
-          }
+          const evergreenSince =
+            (fm["evergreen-since"] as string | undefined) ??
+            new Date().toISOString().slice(0, 10);
+          props["evergreen-since"] = [evergreenSince];
         }
       }
     }
