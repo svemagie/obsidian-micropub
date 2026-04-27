@@ -218,6 +218,8 @@ export class Publisher {
       props["visibility"] = [visibility];
     }
 
+    props["post-status"] = [(fm["post-status"] as string | undefined) ?? "draft"];
+
     // AI disclosure — kebab-case keys (ai-text-level, ai-tools, etc.)
     // with camelCase fallback for backward compatibility.
     // Also support nested `ai` object flattening.
@@ -415,11 +417,16 @@ export class Publisher {
       ":" +
       String(now.getSeconds()).padStart(2, "0");
 
+    const { frontmatter: fm } = this.parseFrontmatter(originalContent);
+    const wasDraft = fm["post-status"] !== "published";
+
     const fields: Array<[string, string]> = [
       ["mp-url", `"${url}"`],
-      ["post-status", "published"],
       ["published", publishedDate],
     ];
+    if (!wasDraft) {
+      fields.push(["post-status", "published"]);
+    }
 
     // Record the syndication targets used so future publishes know what was sent
     if (syndicateToOverride !== undefined) {
@@ -437,7 +444,6 @@ export class Publisher {
 
     // Stamp evergreen-since on first promotion to the evergreen garden stage.
     {
-      const { frontmatter: fm } = this.parseFrontmatter(originalContent);
       if (!fm["evergreen-since"]) {
         const rawTags = [
           ...this.resolveArray(fm["tags"]),
