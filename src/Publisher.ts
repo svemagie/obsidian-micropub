@@ -115,7 +115,7 @@ export class Publisher {
     const isInteractionWithoutBody =
       (likeOf || repostOf) && !trimmedBody;
     if (!isInteractionWithoutBody) {
-      props["content"] = trimmedBody ? [{ text: trimmedBody }] : [{ text: "" }];
+      props["content"] = [trimmedBody];
     }
 
     // ── Standard properties ───────────────────────────────────────────────
