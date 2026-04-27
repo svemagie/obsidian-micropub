@@ -142,8 +142,11 @@ mp-url: "https://example.com/articles/2026/on-building-in-public"
 | `mp-url` / `url` | Existing post URL — triggers an **update** rather than create |
 | `postType` | Force post type: `article` (sets `name`), `note` (skips `name`) |
 | `title` / `name` | Sets the post `name`; presence auto-detects post type as article |
+| `post-status` | `draft` (default) / `published` — controls whether the post is saved as draft or published live |
 
 If no `postType` is set: a note with a `title` or `name` field publishes as an article; a note without one publishes as a note.
+
+**Draft / publish workflow:** every note defaults to `draft` unless you explicitly set `post-status: published`. When a draft is successfully submitted, the local frontmatter is left unchanged (status stays `draft`). When published, `post-status: published` is written back to the note.
 
 ### Content
 
@@ -152,7 +155,7 @@ If no `postType` is set: a note with a `title` or `name` field publishes as an a
 | `created` / `date` | Sets `published` date; `created` takes priority (matches Obsidian's default) |
 | `tags` + `category` | Both merged into Micropub `category`; `garden/*` and bare `garden` tags are filtered out |
 | `summary` / `excerpt` | Sets the `summary` property |
-| `visibility` | `public` / `unlisted` / `private` |
+| `visibility` | `public` (default) / `unlisted` / `private` — `public` is only sent if your **Default visibility** setting is non-public |
 | `photo` | Featured photo: a URL string, array of URLs, or `[{url, alt}]` objects |
 | `related` | List of `[[WikiLinks]]` or URLs to related posts; WikiLinks are resolved to `mp-url` |
 
